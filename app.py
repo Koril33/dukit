@@ -60,6 +60,8 @@ class MainWindow(QMainWindow):
 
         # 可折叠左侧菜单
         self.list_widget_frame = QFrame()
+        self.list_widget_frame.setMinimumWidth(0)  # 允许完全隐藏左侧面板
+        self.list_widget_frame.setMaximumWidth(200)  # 设置最大宽度限制
         list_layout = QVBoxLayout()
         list_layout.setContentsMargins(0, 0, 0, 0)
         list_layout.addWidget(self.list_widget)
@@ -69,22 +71,15 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(FileCompareWidget())
         self.stack.addWidget(UnixTimestampWidget())
         self.stack.addWidget(UUIDGeneratorWidget())
+        self.stack.setMinimumWidth(400)  # 确保右侧内容区域有最小宽度
 
         splitter.addWidget(self.list_widget_frame)
         splitter.addWidget(self.stack)
-        splitter.setStretchFactor(1, 1)
+        splitter.setCollapsible(0, True)  # 允许左侧面板被完全折叠
+        splitter.setSizes([200, 600])  # 初始分割比例
 
         self.setCentralWidget(splitter)
-
         self.list_widget.currentRowChanged.connect(self.stack.setCurrentIndex)
-
-    def keyPressEvent(self, event):
-        # 用 Tab 键切换左侧面板显示/隐藏
-        if event.key() == Qt.Key.Key_Tab:
-            if self.list_widget_frame.isVisible():
-                self.list_widget_frame.hide()
-            else:
-                self.list_widget_frame.show()
 
 
 if __name__ == "__main__":
