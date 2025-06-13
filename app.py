@@ -91,11 +91,18 @@ def myers_diff(a, b):
 class FileCompareWidget(QWidget):
     def __init__(self):
         super().__init__()
+        self.clear_all_text_button = None
+        self.clear_right_text_button = None
+        self.clear_left_text_button = None
         self.compare_button = None
         self.diff_result = None
         self.right_text = None
         self.left_text = None
         self.setup_ui()
+
+    def clear_all_texts(self):
+        self.left_text.clear()
+        self.right_text.clear()
 
     def setup_ui(self):
         layout = QVBoxLayout()
@@ -112,11 +119,25 @@ class FileCompareWidget(QWidget):
         self.diff_result.setReadOnly(True)
         self.diff_result.setFontFamily("Courier New")
 
+        btn_layout = QHBoxLayout()
+
         self.compare_button = QPushButton("比较差异")
         self.compare_button.clicked.connect(self.run_diff)
+        self.clear_left_text_button = QPushButton("清空左侧文本")
+        self.clear_right_text_button = QPushButton("清空右侧文本")
+        self.clear_all_text_button = QPushButton("清空所有文本")
+        self.clear_left_text_button.clicked.connect(self.left_text.clear)
+        self.clear_right_text_button.clicked.connect(self.right_text.clear)
+        self.clear_all_text_button.clicked.connect(self.clear_all_texts)
+
 
         layout.addLayout(editor_layout)
-        layout.addWidget(self.compare_button)
+        btn_layout.addWidget(self.compare_button)
+        btn_layout.addWidget(self.clear_left_text_button)
+        btn_layout.addWidget(self.clear_right_text_button)
+        btn_layout.addWidget(self.clear_all_text_button)
+        layout.addLayout(btn_layout)
+
         layout.addWidget(QLabel("对比结果："))
         layout.addWidget(self.diff_result)
 
