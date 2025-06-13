@@ -1,12 +1,12 @@
 import sys
 
-from PySide6.QtGui import QTextCharFormat, QColor
+from PySide6.QtGui import QTextCharFormat, QColor, QFont, QPainter
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel,
     QSplitter, QListWidget, QListWidgetItem, QStackedWidget,
-    QFrame, QHBoxLayout, QTextEdit, QPushButton
+    QFrame, QHBoxLayout, QPushButton, QPlainTextEdit
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize, QRect
 
 
 def _reconstruct(a, b, trace):
@@ -88,6 +88,97 @@ def myers_diff(a, b):
     return []  # 无差异时返回空列表
 
 
+class LineNumberArea(QWidget):
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.editor = editor
+
+    def sizeHint(self):
+        # 根据行号位数计算宽度
+        digits = len(str(max(1, self.editor.blockCount())))
+        # Adjust 'space' to ensure enough room for line numbers,
+        # especially for larger fonts or more digits.
+        # Adding a small buffer (e.g., 5-8) is often good practice.
+        space = 3 + self.editor.fontMetrics().horizontalAdvance('9') * digits + 5
+        return QSize(space, 0)
+
+    def paintEvent(self, event):
+        self.editor.line_number_area_paint_event(event)
+
+
+class CustomPlainTextEdit(QPlainTextEdit):
+    def __init__(self):
+        super().__init__()
+        self.lineNumberArea = LineNumberArea(self)
+        self.setFont(QFont("Consolas", 12))  # 设置等宽字体
+
+        # Connect signals for updating the line number area
+        self.blockCountChanged.connect(self.update_line_number_area_width)
+        # This signal is emitted when the text content changes,
+        # which can affect the visibility of lines and thus the line numbers.
+        self.textChanged.connect(self.update_line_number_area_width)
+        # This signal is crucial for scrolling. It's emitted when the
+        # content of the viewport changes, including scrolling.
+        self.verticalScrollBar().valueChanged.connect(self.update_line_number_area_on_scroll)
+        # Also connect to update when the document layout changes
+        # (e.g., text wrapping, font size changes, etc.)
+        self.updateRequest.connect(self.update_line_number_area)
+
+        self.update_line_number_area_width()
+
+    def update_line_number_area_width(self):
+        # 设置左侧边距以容纳行号区域
+        self.setViewportMargins(self.lineNumberArea.sizeHint().width(), 0, 0, 0)
+        # After updating the width, also ensure the line number area itself is repainted
+        self.lineNumberArea.update() # Force repaint of line number area
+
+    def update_line_number_area_on_scroll(self, value):
+        # This slot is called when the scrollbar moves.
+        # We need to repaint the line number area to reflect the new visible lines.
+        self.lineNumberArea.update()
+
+    def update_line_number_area(self, rect, dy):
+        # This slot is called when the content is updated, or scrolled.
+        # 'rect' is the area that needs updating, 'dy' is the vertical scroll amount.
+        if dy:
+            self.lineNumberArea.scroll(0, dy)
+        else:
+            self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+        # If the rect covers the entire height, then the entire line number area needs a full repaint
+        if rect.contains(self.viewport().rect()):
+            self.update_line_number_area_width() # Re-evaluate width in case of significant changes
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # 调整行号区域位置和大小
+        cr = self.contentsRect()
+        self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberArea.sizeHint().width(), cr.height()))
+
+    def line_number_area_paint_event(self, event):
+        painter = QPainter(self.lineNumberArea)
+        painter.fillRect(event.rect(), QColor("#f0f0f0"))  # 行号背景色
+
+        block = self.firstVisibleBlock()
+        block_number = block.blockNumber()
+        # Initial top position accounting for potential content offset
+        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        font_metrics = self.fontMetrics()
+        line_height = font_metrics.height()
+
+        # Optimize the loop by only painting visible blocks within the event.rect()
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and top + line_height >= event.rect().top():
+                number = str(block_number + 1)
+                painter.setPen(Qt.GlobalColor.black) # Set pen color for readability
+                # Ensure the text is drawn within the line number area's width
+                # Use AlignRight and AlignVCenter for better alignment
+                painter.drawText(0, int(top), self.lineNumberArea.width() - 3, line_height,
+                                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, number)
+            block = block.next()
+            block_number += 1
+            top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+
+
 class FileCompareWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -108,16 +199,15 @@ class FileCompareWidget(QWidget):
         layout = QVBoxLayout()
 
         editor_layout = QHBoxLayout()
-        self.left_text = QTextEdit()
-        self.right_text = QTextEdit()
+        self.left_text = CustomPlainTextEdit()
+        self.right_text = CustomPlainTextEdit()
         self.left_text.setPlaceholderText("旧文本")
         self.right_text.setPlaceholderText("新文本")
         editor_layout.addWidget(self.left_text)
         editor_layout.addWidget(self.right_text)
 
-        self.diff_result = QTextEdit()
+        self.diff_result = CustomPlainTextEdit()
         self.diff_result.setReadOnly(True)
-        self.diff_result.setFontFamily("Courier New")
 
         btn_layout = QHBoxLayout()
 
