@@ -1,8 +1,13 @@
+import hashlib
 import time
 
 from PySide6.QtCore import QSize, QRect, Qt
 from PySide6.QtGui import QFont, QPainter, QColor, QTextCharFormat, QTextFormat
 from PySide6.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QTextEdit
+
+
+def hash_text(text):
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
 def _reconstruct(a, b, trace):
@@ -228,25 +233,29 @@ class FileCompareWidget(QWidget):
 
     def run_diff(self):
         start_time = int(time.time() * 1000)
-        a_lines = self.left_text.toPlainText().splitlines()
-        b_lines = self.right_text.toPlainText().splitlines()
-        diff = myers_diff(a_lines, b_lines)
-
-
         self.diff_result.clear()
         cursor = self.diff_result.textCursor()
 
-        for line in diff:
-            fmt = QTextCharFormat()
-            if line.startswith("-"):
-                fmt.setForeground(QColor("red"))
-            elif line.startswith("+"):
-                fmt.setForeground(QColor("green"))
-            else:
-                fmt.setForeground(QColor("gray"))
+        a_text = self.left_text.toPlainText()
+        b_text = self.right_text.toPlainText()
 
-            cursor.setCharFormat(fmt)
-            cursor.insertText(line + "\n")
+        if hash_text(a_text) == hash_text(b_text):
+            cursor.insertText("两个文本完全一致")
+        else:
+            a_lines = a_text.splitlines()
+            b_lines = b_text.splitlines()
+            diff = myers_diff(a_lines, b_lines)
+            for line in diff:
+                fmt = QTextCharFormat()
+                if line.startswith("-"):
+                    fmt.setForeground(QColor("red"))
+                elif line.startswith("+"):
+                    fmt.setForeground(QColor("green"))
+                else:
+                    fmt.setForeground(QColor("gray"))
+
+                cursor.setCharFormat(fmt)
+                cursor.insertText(line + "\n")
         end_time = int(time.time() * 1000)
         if self.main_window:
             self.main_window.update_status(f'文件对比完成，耗时: {end_time - start_time} 毫秒')
