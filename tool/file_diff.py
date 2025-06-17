@@ -1,8 +1,8 @@
 import time
 
 from PySide6.QtCore import QSize, QRect, Qt
-from PySide6.QtGui import QFont, QPainter, QColor, QTextCharFormat
-from PySide6.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QPushButton, QLabel
+from PySide6.QtGui import QFont, QPainter, QColor, QTextCharFormat, QTextFormat
+from PySide6.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QTextEdit
 
 
 def _reconstruct(a, b, trace):
@@ -100,6 +100,21 @@ class CustomPlainTextEdit(QPlainTextEdit):
         self.verticalScrollBar().valueChanged.connect(self.update_line_number_area_on_scroll)
         self.updateRequest.connect(self.update_line_number_area)
         self.update_line_number_area_width()
+        self.cursorPositionChanged.connect(self.highlight_current_line)
+
+    def highlight_current_line(self):
+        extra_selections = []
+
+        if not self.isReadOnly():
+            selection = QTextEdit.ExtraSelection()
+            line_color = QColor(Qt.GlobalColor.yellow).lighter(160)  # 浅黄色背景
+            selection.format.setBackground(line_color)
+            selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
+            selection.cursor = self.textCursor()
+            selection.cursor.clearSelection()
+            extra_selections.append(selection)
+
+        self.setExtraSelections(extra_selections)
 
     def update_line_number_area_width(self):
         self.setViewportMargins(self.lineNumberArea.sizeHint().width(), 0, 0, 0)
