@@ -1,3 +1,5 @@
+import time
+
 from PySide6.QtCore import QSize, QRect, Qt
 from PySide6.QtGui import QFont, QPainter, QColor, QTextCharFormat
 from PySide6.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QPushButton, QLabel
@@ -141,8 +143,9 @@ class CustomPlainTextEdit(QPlainTextEdit):
 
 
 class FileCompareWidget(QWidget):
-    def __init__(self):
+    def __init__(self, main_window):
         super().__init__()
+        self.main_window = main_window
         self.clear_all_text_button = None
         self.clear_right_text_button = None
         self.clear_left_text_button = None
@@ -155,6 +158,7 @@ class FileCompareWidget(QWidget):
     def clear_all_texts(self):
         self.left_text.clear()
         self.right_text.clear()
+        self.diff_result.clear()
 
     def setup_ui(self):
         layout = QVBoxLayout()
@@ -174,9 +178,9 @@ class FileCompareWidget(QWidget):
 
         self.compare_button = QPushButton("比较差异")
         self.compare_button.clicked.connect(self.run_diff)
-        self.clear_left_text_button = QPushButton("清空左侧文本")
-        self.clear_right_text_button = QPushButton("清空右侧文本")
-        self.clear_all_text_button = QPushButton("清空所有文本")
+        self.clear_left_text_button = QPushButton("清空左侧")
+        self.clear_right_text_button = QPushButton("清空右侧")
+        self.clear_all_text_button = QPushButton("清空所有")
         self.clear_left_text_button.clicked.connect(self.left_text.clear)
         self.clear_right_text_button.clicked.connect(self.right_text.clear)
         self.clear_all_text_button.clicked.connect(self.clear_all_texts)
@@ -195,10 +199,11 @@ class FileCompareWidget(QWidget):
         self.setLayout(layout)
 
     def run_diff(self):
+        start_time = int(time.time() * 1000)
         a_lines = self.left_text.toPlainText().splitlines()
         b_lines = self.right_text.toPlainText().splitlines()
-
         diff = myers_diff(a_lines, b_lines)
+
 
         self.diff_result.clear()
         cursor = self.diff_result.textCursor()
@@ -214,3 +219,6 @@ class FileCompareWidget(QWidget):
 
             cursor.setCharFormat(fmt)
             cursor.insertText(line + "\n")
+        end_time = int(time.time() * 1000)
+        if self.main_window:
+            self.main_window.update_status(f'文件对比完成，耗时: {end_time - start_time} 毫秒')

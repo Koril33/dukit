@@ -58,7 +58,8 @@ class MainWindow(QMainWindow):
         self.list_widget_frame.setLayout(list_layout)
 
         self.stack = QStackedWidget()
-        self.stack.addWidget(FileCompareWidget())
+        self.file_compare_widget = FileCompareWidget(main_window=self)
+        self.stack.addWidget(self.file_compare_widget)
         self.stack.addWidget(UnixTimestampWidget())
         self.stack.addWidget(UUIDGeneratorWidget())
         self.stack.setMinimumWidth(400)  # 确保右侧内容区域有最小宽度
@@ -71,6 +72,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(splitter)
         self.list_widget.currentRowChanged.connect(self.stack.setCurrentIndex)
 
+    def update_status(self, message: str) -> None:
+        self.statusBar().showMessage(message)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
