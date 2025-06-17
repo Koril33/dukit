@@ -47,24 +47,37 @@ def _reconstruct(a, b, trace):
 def myers_diff(a, b):
     N, M = len(a), len(b)
     max_edit = N + M
+
+    # 记录每一步到达的位置
     trace = []
 
+    # v - 记录该 k 线上到达的最远的 x 坐标
     v = {1: 0}
     for d in range(0, max_edit + 1):
         current_v = {}
+        # 从起点出发走出 d 步时，它只可能落在 k={-d, -d+2, ...., d-2, d} 的 k 线上
+        # 循环，计算这一步可能落在的每条 k 线上的最远位置，直到碰到终点为止
         for k in range(-d, d + 1, 2):
+
+            # 选择前一步 v 中 k 线上走得最远的 x
+            # k == -d: 最左边的对角线，没有 k-1，只能从 k+1 下移过来
+            # 如果当前不是最右边的对角线（否则没有 k+1）比较 v[k - 1] 和 v[k + 1]，谁的 x 更小
             if k == -d or (k != d and v.get(k - 1, -1) < v.get(k + 1, -1)):
+                # 对 a 插入操作，向下移动 x 坐标不变
                 x = v.get(k + 1, 0)
             else:
+                # 对 a 删除操作 +1 表示向右移动，删除元素
                 x = v.get(k - 1, 0) + 1
+            # 通过 k 推算出 y 坐标
             y = x - k
-
+            # 斜对角移动
             while x < N and y < M and a[x] == b[y]:
                 x += 1
                 y += 1
 
             current_v[k] = x
 
+            # 找到最短编辑序列，结束搜索并且构造差异序列
             if x >= N and y >= M:
                 trace.append(current_v)
                 return _reconstruct(a, b, trace)
