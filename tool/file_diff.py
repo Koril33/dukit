@@ -10,8 +10,8 @@ def hash_text(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
-def _reconstruct(a, b, trace):
-    if not trace:  # 无差异时直接返回空列表
+def reconstruct(a, b, trace):
+    if not trace:
         return []
 
     x, y = len(a), len(b)
@@ -21,29 +21,45 @@ def _reconstruct(a, b, trace):
         current_v = trace[d]
         k = x - y
 
-        if k == -d or (k != d and current_v.get(k - 1, float('-inf')) < current_v.get(k + 1, float('-inf'))):
-            prev_k = k + 1
+        # 获取前一步的k值
+        if d == 0:
+            prev_k = None  # d=0时无前一步
         else:
-            prev_k = k - 1
+            if k == -d:
+                prev_k = k + 1  # 边界情况：最左侧只能从k+1来
+            elif k == d:
+                prev_k = k - 1  # 边界情况：最右侧只能从k-1来
+            else:
+                # 使用d-1步的v数据进行比较
+                prev_v = trace[d - 1]
+                # 比较prev_v中k-1和k+1的值
+                val_km1 = prev_v.get(k - 1, float('-inf'))
+                val_kp1 = prev_v.get(k + 1, float('-inf'))
+                if val_km1 < val_kp1:
+                    prev_k = k + 1  # 从上方移动（插入）
+                else:
+                    prev_k = k - 1  # 从左侧移动（删除）
 
+        # 计算前一步的坐标
         if d > 0:
-            prev_v = trace[d-1]
-            prev_x = prev_v[prev_k]
+            prev_x = trace[d - 1][prev_k]
+            prev_y = prev_x - prev_k
         else:
-            prev_x = 0
-        prev_y = prev_x - prev_k
+            prev_x, prev_y = 0, 0  # d=0时起点为(0,0)
 
+        # 回溯对角线（相同元素）
         while x > prev_x and y > prev_y:
             result.append("  " + a[x - 1])
             x -= 1
             y -= 1
 
+        # 回溯非对角线移动（插入/删除）
         if d > 0:
             if prev_x == x:
-                result.append("+ " + b[prev_y])
+                result.append("+ " + b[prev_y])  # 插入
             else:
-                result.append("- " + a[prev_x])
-            x, y = prev_x, prev_y
+                result.append("- " + a[prev_x])  # 删除
+            x, y = prev_x, prev_y  # 更新为前一步坐标
 
     result.reverse()
     return result
@@ -85,7 +101,7 @@ def myers_diff(a, b):
             # 找到最短编辑序列，结束搜索并且构造差异序列
             if x >= N and y >= M:
                 trace.append(current_v)
-                return _reconstruct(a, b, trace)
+                return reconstruct(a, b, trace)
 
         trace.append(current_v)
         v = current_v
