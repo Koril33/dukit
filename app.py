@@ -8,32 +8,9 @@ from PySide6.QtWidgets import (
 )
 
 from tool.file_diff import FileCompareWidget
-
-
-class UnixTimestampWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-        layout = QVBoxLayout()
-        label = QLabel("Unix 时间戳转换功能待开发。")
-        layout.addWidget(label)
-        self.setLayout(layout)
-        self.setup_logic()
-
-    def setup_logic(self):
-        pass  # TODO: Unix 时间戳转换逻辑
-
-
-class UUIDGeneratorWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-        layout = QVBoxLayout()
-        label = QLabel("UUID 生成器功能待开发。")
-        layout.addWidget(label)
-        self.setLayout(layout)
-        self.setup_logic()
-
-    def setup_logic(self):
-        pass  # TODO: UUID 生成逻辑
+from tool.format_text import FormatTextWidget
+from tool.unix_timestamp import UnixTimestampWidget
+from tool.uuid_generator import UUIDGeneratorWidget
 
 
 class MainWindow(QMainWindow):
@@ -45,8 +22,9 @@ class MainWindow(QMainWindow):
         self.list_widget = QListWidget()
         self.list_widget.setMaximumWidth(200)
         self.list_widget.addItem(QListWidgetItem("文件对比"))
-        self.list_widget.addItem(QListWidgetItem("Unix 时间戳转换"))
         self.list_widget.addItem(QListWidgetItem("UUID 生成器"))
+        self.list_widget.addItem(QListWidgetItem("Unix 时间戳转换"))
+        self.list_widget.addItem(QListWidgetItem("文本格式化"))
 
         # 可折叠左侧菜单
         self.list_widget_frame = QFrame()
@@ -58,10 +36,19 @@ class MainWindow(QMainWindow):
         self.list_widget_frame.setLayout(list_layout)
 
         self.stack = QStackedWidget()
+
         self.file_compare_widget = FileCompareWidget(main_window=self)
         self.stack.addWidget(self.file_compare_widget)
-        self.stack.addWidget(UnixTimestampWidget())
-        self.stack.addWidget(UUIDGeneratorWidget())
+
+        self.uuid_generator_widget = UUIDGeneratorWidget()
+        self.stack.addWidget(self.uuid_generator_widget)
+
+        self.unix_timestamp_widget = UnixTimestampWidget()
+        self.stack.addWidget(self.unix_timestamp_widget)
+
+        self.format_text_widget = FormatTextWidget()
+        self.stack.addWidget(self.format_text_widget)
+
         self.stack.setMinimumWidth(400)  # 确保右侧内容区域有最小宽度
 
         splitter.addWidget(self.list_widget_frame)

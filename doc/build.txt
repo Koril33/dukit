@@ -1,0 +1,1 @@
+python -m nuitka --windows-icon-from-ico=favicon.ico --onefile --windows-console-mode=disable --include-module=pygments.formatters.html --plugin-enable=pyside6 --output-dir=out --output-filename=dukit.exe .\app.py
